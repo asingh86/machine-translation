@@ -6,6 +6,7 @@ from fastapi import FastAPI
 
 from app.api.routes import router
 from app.config import Settings
+from app.middleware.safeguard import Safeguard
 from app.models.registry import ModelRegistry
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,10 @@ async def lifespan(app: FastAPI):
     app.state.registry = registry
     app.state.settings = settings
     app.state.semaphore = asyncio.Semaphore(settings.max_concurrent_requests)
+    app.state.safeguard = Safeguard(
+        min_length=settings.min_input_length,
+        max_length=settings.max_input_length,
+    )
     logger.info(
         "Models loaded — application ready (max concurrent requests: %d)",
         settings.max_concurrent_requests,
