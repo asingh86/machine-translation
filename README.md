@@ -160,4 +160,4 @@ All settings are configurable via environment variables prefixed with `TRANSLATE
 
 ## CI
 
-GitHub Actions (to be implemented) runs on every push to `main` and on PRs: linting (ruff), tests (pytest), and Docker image build verification.
+To be Implemented
