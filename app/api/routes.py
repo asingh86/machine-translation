@@ -90,6 +90,18 @@ async def translate(body: TranslationRequest, request: Request):
     except SafeguardError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+    logger.info(
+        "translation completed",
+        extra={
+            "source_lang": body.source_lang,
+            "target_lang": body.target_lang,
+            "input_length": len(body.text),
+            "output_length": len(result["translated_text"]),
+            "inference_time_ms": result["inference_time_ms"],
+            "model_name": result["model_name"],
+        },
+    )
+
     return TranslationResponse(
         translated_text=result["translated_text"],
         source_lang=body.source_lang,

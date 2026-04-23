@@ -6,11 +6,14 @@ from fastapi import FastAPI
 
 from app.api.routes import router
 from app.config import Settings
+from app.logging_config import setup_logging
+from app.middleware.request_logging import RequestLoggingMiddleware
 from app.middleware.safeguard import Safeguard
 from app.models.registry import ModelRegistry
 
-logger = logging.getLogger(__name__)
 settings = Settings()
+setup_logging(settings.log_level)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -39,4 +42,5 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(RequestLoggingMiddleware)
 app.include_router(router)
