@@ -3,6 +3,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Request
 
+from app.middleware.safeguard import SafeguardError
 from app.schemas.translation import (
     HealthResponse,
     LanguagePair,
@@ -62,6 +63,12 @@ async def translate(body: TranslationRequest, request: Request):
     registry = request.app.state.registry
     semaphore = request.app.state.semaphore
     settings = request.app.state.settings
+    safeguard = request.app.state.safeguard
+
+    try:
+        safeguard.validate_input(body.text, body.source_lang)
+    except SafeguardError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     try:
         async with semaphore:
@@ -77,6 +84,23 @@ async def translate(body: TranslationRequest, request: Request):
     except Exception:
         logger.exception("Translation failed")
         raise HTTPException(status_code=500, detail="Translation failed unexpectedly")
+
+    try:
+        safeguard.validate_output(result["translated_text"], body.target_lang)
+    except SafeguardError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    logger.info(
+        "translation completed",
+        extra={
+            "source_lang": body.source_lang,
+            "target_lang": body.target_lang,
+            "input_length": len(body.text),
+            "output_length": len(result["translated_text"]),
+            "inference_time_ms": result["inference_time_ms"],
+            "model_name": result["model_name"],
+        },
+    )
 
     return TranslationResponse(
         translated_text=result["translated_text"],
