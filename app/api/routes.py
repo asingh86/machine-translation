@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from fastapi import APIRouter, HTTPException, Request
@@ -35,7 +36,7 @@ async def readiness(request: Request):
         raise HTTPException(status_code=503, detail="Models not yet loaded")
 
     try:
-        registry.translate("hello", "en", "es")
+        await asyncio.to_thread(registry.translate, "hello", "en", "es")
     except Exception:
         logger.exception("Readiness check failed")
         raise HTTPException(status_code=503, detail="Model inference check failed")
@@ -52,13 +53,27 @@ async def list_languages(request: Request):
 
 @router.post("/translate", response_model=TranslationResponse)
 async def translate(body: TranslationRequest, request: Request):
-    """Translate text between supported language pairs."""
+    """Translate text between supported language pairs.
+
+    Inference is offloaded to a thread pool via asyncio.to_thread so it
+    doesn't block the event loop. A semaphore limits concurrent inferences
+    to prevent memory exhaustion under load.
+    """
     registry = request.app.state.registry
+    semaphore = request.app.state.semaphore
+    settings = request.app.state.settings
 
     try:
-        result = registry.translate(body.text, body.source_lang, body.target_lang)
+        async with semaphore:
+            result = await asyncio.wait_for(
+                asyncio.to_thread(registry.translate, body.text, body.source_lang, body.target_lang),
+                timeout=settings.request_timeout_seconds,
+            )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except asyncio.TimeoutError:
+        logger.warning("Translation timed out after %ds", settings.request_timeout_seconds)
+        raise HTTPException(status_code=504, detail="Translation timed out")
     except Exception:
         logger.exception("Translation failed")
         raise HTTPException(status_code=500, detail="Translation failed unexpectedly")

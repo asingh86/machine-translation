@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import asyncio
 import logging
 
 from fastapi import FastAPI
@@ -17,7 +18,12 @@ async def lifespan(app: FastAPI):
     registry = ModelRegistry(settings)
     registry.load()
     app.state.registry = registry
-    logger.info("Models loaded — application ready")
+    app.state.settings = settings
+    app.state.semaphore = asyncio.Semaphore(settings.max_concurrent_requests)
+    logger.info(
+        "Models loaded — application ready (max concurrent requests: %d)",
+        settings.max_concurrent_requests,
+    )
     yield
     logger.info("Application shutting down")
 
