@@ -1,31 +1,32 @@
 # Virtual environment
 .venv/
 venv/
-
+ 
 # Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 dist/
 build/
-
+ 
 # Environment
 .env
-
+ 
 # IDE
 .vscode/
 .idea/
-
+ 
 # OS
 .DS_Store
 Thumbs.db
-
+ 
 # Models cache
 models_cache/
-
+ 
 # Feedback data
 feedback_data/
-
+ 
 # Coverage
 htmlcov/
 .coverage
+ 
