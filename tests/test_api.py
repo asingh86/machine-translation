@@ -83,3 +83,28 @@ def test_translate_exceeds_max_length_returns_422(client):
         "target_lang": "es",
     })
     assert response.status_code == 422
+
+
+def test_translate_blocked_input_returns_400(client):
+    response = client.post("/translate", json={
+        "text": "fuck you",
+        "source_lang": "en",
+        "target_lang": "es",
+    })
+    assert response.status_code == 400
+    assert "inappropriate" in response.json()["detail"]
+
+
+def test_translate_whitespace_only_returns_400(client):
+    response = client.post("/translate", json={
+        "text": "   \n\t  ",
+        "source_lang": "en",
+        "target_lang": "es",
+    })
+    assert response.status_code == 400
+
+
+def test_request_id_header_present(client):
+    response = client.get("/")
+    assert "X-Request-ID" in response.headers
+    assert len(response.headers["X-Request-ID"]) == 12
